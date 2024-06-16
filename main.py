@@ -1,22 +1,91 @@
+# _training_code
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import tensorflow as tf
-from keras.layers import Flatten, MaxPooling2D, Conv2D
-from keras.models import Sequential, Model
+from keras.layers import Flatten
+from keras.models import Sequential, Model, load_model
 from keras.callbacks import EarlyStopping, Callback
-from keras.layers import Dense, Dropout, Activation, Lambda, ELU, GlobalAveragePooling2D
-from keras.layers import Cropping2D
-from keras.optimizers import Adam
+from keras.layers import (
+    Dense,
+    Dropout,
+    Activation,
+    Flatten,
+    Lambda,
+    ELU,
+    GlobalAveragePooling2D,
+)
+from keras.layers import Flatten, MaxPooling2D, Conv2D
 from sklearn.utils import shuffle
-from tensorflow.keras.utils import to_categorical
 from keras.utils import to_categorical
-
 import time, cv2, glob
+from keras.applications import VGG16
 
 global inputShape, size
+size = 300
+inputShape = (size, size, 1)
+num_classes = 2  # You might need to adjust this based on your task
 
+
+def create_transfer_model(input_shape, num_classes):
+    base_model = VGG16(weights="imagenet", include_top=False, input_shape=input_shape)
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(512, activation="relu")(x)
+    x = Dropout(0.5)(x)
+    predictions = Dense(num_classes, activation="softmax")(x)
+    model = Model(inputs=base_model.input, outputs=predictions)
+    return model
+
+
+model = create_transfer_model(inputShape, num_classes)
+
+#try this architecture-
+# from keras.models import Sequential
+# from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Activation, Dropout, BatchNormalization
+
+# def improved_pothole_detection_model(input_shape):
+#     model = Sequential()
+
+#     # 1st convolutional layer
+#     model.add(Conv2D(64, (5, 5), padding='same', input_shape=input_shape))
+#     model.add(Activation('relu'))
+#     model.add(MaxPooling2D(pool_size=(2, 2)))
+
+#     # 2nd convolutional layer
+#     model.add(Conv2D(64, (5, 5), padding='same'))
+#     model.add(Activation('relu'))
+#     model.add(MaxPooling2D(pool_size=(2, 2)))
+
+#     # 3rd convolutional layer
+#     model.add(Conv2D(32, (3, 3), padding='same'))
+#     model.add(Activation('relu'))
+#     model.add(MaxPooling2D(pool_size=(2, 2)))
+#     model.add(Dropout(0.25))
+
+#     # 4th convolutional layer
+#     model.add(Conv2D(16, (3, 3), padding='same'))
+#     model.add(Activation('relu'))
+#     model.add(MaxPooling2D(pool_size=(2, 2)))
+
+#     # Flattening the layers
+#     model.add(Flatten())
+
+#     # Fully connected layers
+#     model.add(Dense(256))
+#     model.add(Activation('relu'))
+#     model.add(Dropout(0.5))
+
+#     # Output layer
+#     model.add(Dense(2))
+#     model.add(Activation('softmax'))
+
+#     return model
+# Assuming input image size is 64x64 and 3 channels (RGB)
+# input_shape = (64, 64, 3)
+# model = improved_pothole_detection_model(input_shape)
 
 def kerasModel4():
     model = Sequential()
@@ -42,29 +111,24 @@ def kerasModel4():
     return model
 
 
-size = 100
+## load Training data : pothole
 potholeTrainImages = glob.glob(
-    r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\train\Pothole\*.jpg"
+    r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\train\Pothole/*.jpg"
 )
 potholeTrainImages.extend(
     glob.glob(
-        r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\train\Pothole\*.jpeg"
+        r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\train\Pothole/*.jpeg"
     )
 )
 potholeTrainImages.extend(
     glob.glob(
-        r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\train\Pothole\*.png"
+        r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\train\Pothole/*.png"
     )
 )
 
-# Similarly update the other file paths for nonPotholeTrainImages, nonPotholeTestImages, and potholeTestImages
-
-
-train1 = []
-for img_path in potholeTrainImages:
-    img = cv2.imread(img_path, 0)
-    img = cv2.resize(img, (size, size))
-    train1.append(img)
+train1 = [cv2.imread(img, 0) for img in potholeTrainImages]
+for i in range(0, len(train1)):
+    train1[i] = cv2.resize(train1[i], (size, size))
 temp1 = np.asarray(train1)
 
 
@@ -75,11 +139,9 @@ nonPotholeTrainImages = glob.glob(
 # nonPotholeTrainImages.extend(glob.glob("C:/Users/anant/Desktop/pothole-and-plain-rode-images/My Dataset/train/Plain/*.jpeg"))
 # nonPotholeTrainImages.extend(glob.glob("C:/Users/anant/Desktop/pothole-and-plain-rode-images/My Dataset/train/Plain/*.png"))
 train2 = [cv2.imread(img, 0) for img in nonPotholeTrainImages]
-# train2[train2 != np.array(None)]
 for i in range(0, len(train2)):
     train2[i] = cv2.resize(train2[i], (size, size))
 temp2 = np.asarray(train2)
-
 
 ## load Testing data : non-pothole
 nonPotholeTestImages = glob.glob(
@@ -88,7 +150,6 @@ nonPotholeTestImages = glob.glob(
 # nonPotholeTrainImages.extend(glob.glob("C:/Users/anant/Desktop/pothole-and-plain-rode-images/My Dataset/train/Plain/*.jpeg"))
 # nonPotholeTrainImages.extend(glob.glob("C:/Users/anant/Desktop/pothole-and-plain-rode-images/My Dataset/train/Plain/*.png"))
 test2 = [cv2.imread(img, 0) for img in nonPotholeTestImages]
-# train2[train2 != np.array(None)]
 for i in range(0, len(test2)):
     test2[i] = cv2.resize(test2[i], (size, size))
 temp4 = np.asarray(test2)
@@ -101,7 +162,6 @@ potholeTestImages = glob.glob(
 # nonPotholeTrainImages.extend(glob.glob("C:/Users/anant/Desktop/pothole-and-plain-rode-images/My Dataset/train/Plain/*.jpeg"))
 # nonPotholeTrainImages.extend(glob.glob("C:/Users/anant/Desktop/pothole-and-plain-rode-images/My Dataset/train/Plain/*.png"))
 test1 = [cv2.imread(img, 0) for img in potholeTestImages]
-# train2[train2 != np.array(None)]
 for i in range(0, len(test1)):
     test1[i] = cv2.resize(test1[i], (size, size))
 temp3 = np.asarray(test1)
@@ -142,12 +202,12 @@ y_test = np.asarray(y_test)
 X_train, y_train = shuffle(X_train, y_train)
 X_test, y_test = shuffle(X_test, y_test)
 
-# X_train.reshape([-1,50,50,1])
-# X_test.reshape([-1,50,50,1])/
 X_train = X_train.reshape(X_train.shape[0], size, size, 1)
 X_test = X_test.reshape(X_test.shape[0], size, size, 1)
+
 y_train = to_categorical(y_train)
 y_test = to_categorical(y_test)
+
 
 print("train shape X", X_train.shape)
 print("train shape y", y_train.shape)
@@ -155,23 +215,22 @@ print("train shape y", y_train.shape)
 inputShape = (size, size, 1)
 model = kerasModel4()
 
+X_train = X_train / 255
+X_test = X_test / 255
 
 model.compile("adam", "categorical_crossentropy", ["accuracy"])
-history = model.fit(X_train, y_train, epochs=500, validation_split=0.1)
+history = model.fit(X_train, y_train, epochs=100, validation_split=0.1)
 
-metrics = model.evaluate(X_test, y_test)
-for metric_i in range(len(model.metrics_names)):
-    metric_name = model.metrics_names[metric_i]
-    metric_value = metrics[metric_i]
-    print("{}: {}".format(metric_name, metric_value))
+print("")
+
+metricsTrain = model.evaluate(X_train, y_train)
+print("Training Accuracy: ", metricsTrain[1] * 100, "%")
+
+print("")
+
+metricsTest = model.evaluate(X_test, y_test)
+print("Testing Accuracy: ", metricsTest[1] * 100, "%")
 
 print("Saving model weights and configuration file")
-
-model.save("sample.h5")
-
-model_json = model.to_json()
-with open("truesample.json", "w") as json_file:
-    json_file.write(model_json)
-
-model.save_weights("truesample.h5")
+model.save("latest_full_model.keras")
 print("Saved model to disk")

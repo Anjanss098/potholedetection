@@ -1,3 +1,5 @@
+# _prediction_code
+
 import numpy as np
 import cv2
 import glob
@@ -7,19 +9,17 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
 from keras.utils import to_categorical
 
-
 global size
-size = 100
+# OG size = 300
+size = 300
 model = Sequential()
+# *****change the path to the latest_full_model.h5 here
 model = load_model(
-    r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\sample.h5"
+    r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\Real-time Files\full_model.h5"
 )
 
 
-# X_test = np.load('./models/trainData/128x72x3x10000/X_test.npy')
-# y_test = np.load('./models/trainData/128x72x3x10000/y_test.npy')
-
-## load Testing data : non-pothole
+## load Testing data : non-pothole E:/Major 7sem/pothole-and-plain-rode-images/My Dataset/test/Plain
 nonPotholeTestImages = glob.glob(
     r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\test\Plain/*.jpg"
 )
@@ -32,7 +32,7 @@ for i in range(0, len(test2)):
 temp4 = np.asarray(test2)
 
 
-## load Testing data : potholes
+## load Testing data : potholes E:\Major 7sem\pothole-and-plain-rode-images\My Dataset\test\Pothole
 potholeTestImages = glob.glob(
     r"C:\Users\Somashekar\OneDrive\Desktop\ideation\pothole-detection-system-using-convolution-neural-networks\My Dataset\test\Pothole/*.jpg"
 )
@@ -60,17 +60,18 @@ y_test = []
 y_test.extend(y_test1)
 y_test.extend(y_test2)
 y_test = np.asarray(y_test)
-
 y_test = to_categorical(y_test)
 
 
+print("")
+X_test = X_test / 255
 predicted_probabilities = model.predict(X_test)
+predicted_classes = np.argmax(predicted_probabilities, axis=1)
 for i in range(len(X_test)):
-    print(">>> Predicted=%s" % (predicted_probabilities[i]))
+    print(">>> Predicted class for sample %d = %s" % (i, predicted_classes[i]))
 
 
-# metrics = model.evaluate(X_test, y_test)
-# for metric_i in range(len(model.metrics_names)):
-#     metric_name = model.metrics_names[metric_i]
-#     metric_value = metrics[metric_i]
-#     print('{}: {}'.format(metric_name, metric_value))
+# evaluation_results = model.evaluate()
+print("")
+metrics = model.evaluate(X_test, y_test)
+print("Test Accuracy: ", metrics[1] * 100, "%")
